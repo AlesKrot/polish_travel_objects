@@ -1,6 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 fun detectTarget(): String {
     val hostOs = when (val os = System.getProperty("os.name").lowercase()) {
@@ -25,6 +26,23 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
+    alias(libs.plugins.buildkonfig)
+}
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { inputStream ->
+            load(inputStream)
+        }
+    }
+}
+
+buildkonfig {
+    packageName = "com.aleskrot.zabytki"
+    defaultConfigs {
+        buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "MAPTILER_KEY", localProperties.getProperty("MAPTILER_KEY") ?: "")
+    }
 }
 
 kotlin {
