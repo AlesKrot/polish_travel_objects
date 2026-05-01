@@ -9,7 +9,9 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.routing.*
+import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
@@ -32,6 +34,14 @@ fun main() {
         install(ContentNegotiation) {
             json()
         }
+        install(CORS) {
+            anyHost()
+            allowHeader(HttpHeaders.ContentType)
+            allowMethod(HttpMethod.Options)
+            allowMethod(HttpMethod.Put)
+            allowMethod(HttpMethod.Patch)
+            allowMethod(HttpMethod.Delete)
+        }
         routing {
             heritageRoutes(repository)
         }
@@ -50,7 +60,7 @@ private fun seedDatabase(repository: HeritageRepository) {
             for (item in items) {
                 repository.addItem(item)
             }
-            println("Дададзена ${items.size} аб'ектаў у базу.")
+            println("Added ${items.size} objects into base.")
         }
     }
 }

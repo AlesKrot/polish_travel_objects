@@ -27,6 +27,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
     alias(libs.plugins.buildkonfig)
+    alias(libs.plugins.serialization)
 }
 
 val localProperties = Properties().apply {
@@ -42,6 +43,7 @@ buildkonfig {
     packageName = "com.aleskrot.zabytki"
     defaultConfigs {
         buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "MAPTILER_KEY", localProperties.getProperty("MAPTILER_KEY") ?: "")
+        buildConfigField(com.codingfeline.buildkonfig.compiler.FieldSpec.Type.STRING, "BASE_URL", localProperties.getProperty("BASE_URL") ?: "http://localhost:8080")
     }
 }
 
@@ -63,6 +65,7 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.ktor.client.okhttp)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -74,8 +77,13 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.maplibre.compose)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
+            implementation(libs.ktor.client.logging)
         }
         jsMain.dependencies {
+            implementation(libs.ktor.client.js)
             implementation(npm("maplibre-gl", "4.7.1"))
         }
         commonTest.dependencies {
@@ -84,6 +92,7 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+            implementation(libs.ktor.client.okhttp)
             runtimeOnly("org.maplibre.compose:maplibre-native-bindings-jni:0.12.1") {
                 capabilities {
                     requireCapability("org.maplibre.compose:maplibre-native-bindings-jni-${detectTarget()}")

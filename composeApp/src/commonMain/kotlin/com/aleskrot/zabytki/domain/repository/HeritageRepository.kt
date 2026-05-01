@@ -1,0 +1,9 @@
+package com.aleskrot.zabytki.domain.repository
+
+import com.aleskrot.zabytki.domain.model.HeritageItem
+
+interface HeritageRepository {
+    suspend fun getHeritageItems(): List<HeritageItem>
+    suspend fun getHeritageItemById(id: String): HeritageItem?
+    suspend fun searchHeritageItems(query: String): List<HeritageItem>
+}
