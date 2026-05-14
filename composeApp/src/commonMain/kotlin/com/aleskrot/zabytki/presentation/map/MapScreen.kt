@@ -18,6 +18,7 @@ import com.aleskrot.zabytki.data.repository.HeritageRemoteRepository
 import com.aleskrot.zabytki.data.repository.createHttpClient
 import com.aleskrot.zabytki.domain.model.HeritageItem
 import com.aleskrot.zabytki.presentation.components.ErrorOverlay
+import com.aleskrot.zabytki.presentation.components.HeritageInfoPopup
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.compose.layers.CircleLayer
@@ -234,27 +235,6 @@ fun MapScreen() {
                 message = errorMsg,
                 onRetry = { viewModel.loadItems() }
             )
-        }
-    }
-}
-
-@Composable
-fun HeritageInfoPopup(item: HeritageItem, onDismiss: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).padding(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth().wrapContentHeight()
-        ) {
-            Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = item.itemLabel, style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = item.categoryLabel, style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = onDismiss) { Text("Close") }
-            }
         }
     }
 }
