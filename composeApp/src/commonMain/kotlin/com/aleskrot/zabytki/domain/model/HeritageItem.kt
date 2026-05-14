@@ -5,22 +5,23 @@ import org.maplibre.spatialk.geojson.Position
 
 @Serializable
 data class HeritageItem(
-    val item: String,          // URL Wiki
-    val itemLabel: String,     // Name (ex. "Nawer")
-    val coords: String,        // Coordinates "Point(21.15 52.21)"
-    val categoryLabel: String, // Category (ex. "dzielnica miasta")
-    val image: String          // URL image
+    val item: String = "",          // URL Wiki
+    val itemLabel: String = "",     // Name (ex. "Nawer")
+    val coords: String = "",        // Coordinates "Point(21.15 52.21)"
+    val categoryLabel: String = "", // Category (ex. "dzielnica miasta")
+    val image: String = ""          // URL image
 ) {
     /**
      * Parses the "Point(lon lat)" string into a Position object.
      */
     fun getPosition(): Position? {
+        if (coords.isEmpty()) return null
         return try {
             val content = coords.substringAfter("Point(").substringBefore(")")
-            val parts = content.split(" ")
+            val parts = content.trim().split(Regex("\\s+"))
             if (parts.size >= 2) {
-                val longitude = parts[0].toDouble()
-                val latitude = parts[1].toDouble()
+                val longitude = parts[0].toDoubleOrNull() ?: return null
+                val latitude = parts[1].toDoubleOrNull() ?: return null
                 Position(longitude = longitude, latitude = latitude)
             } else null
         } catch (e: Exception) {

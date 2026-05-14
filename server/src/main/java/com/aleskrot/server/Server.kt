@@ -51,11 +51,11 @@ fun main() {
 private fun seedDatabase(repository: HeritageRepository) {
     runBlocking {
         if (repository.getAllItems().isEmpty()) {
-            // Чытаем файл з рэсурсаў
             val jsonText = object {}.javaClass.classLoader
                 .getResource("heritage.json")?.readText() ?: "[]"
 
-            val items = Json.decodeFromString<List<HeritageItem>>(jsonText)
+            val json = Json { ignoreUnknownKeys = true }
+            val items = json.decodeFromString<List<HeritageItem>>(jsonText)
 
             for (item in items) {
                 repository.addItem(item)

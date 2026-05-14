@@ -9,6 +9,8 @@ import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
 class HeritageRemoteRepository(
@@ -37,7 +39,9 @@ class HeritageRemoteRepository(
             val response = httpClient.get(url)
             println("HeritageRemoteRepository: Response status: ${response.status}")
             
-            val items: List<HeritageItem> = response.body()
+            val items: List<HeritageItem> = withContext(Dispatchers.Default) {
+                response.body()
+            }
             println("HeritageRemoteRepository: Successfully fetched ${items.size} items")
             
             items
@@ -45,7 +49,7 @@ class HeritageRemoteRepository(
             val errorMsg = "Error fetching items: ${e.message}"
             println("HeritageRemoteRepository: $errorMsg")
             e.printStackTrace()
-            emptyList()
+            throw e
         }
     }
 

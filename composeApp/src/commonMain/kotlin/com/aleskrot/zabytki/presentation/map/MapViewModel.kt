@@ -16,6 +16,9 @@ class MapViewModel(
     private val _items = MutableStateFlow<List<HeritageItem>>(emptyList())
     val items: StateFlow<List<HeritageItem>> = _items.asStateFlow()
 
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
     private val _selectedItem = MutableStateFlow<HeritageItem?>(null)
     val selectedItem: StateFlow<HeritageItem?> = _selectedItem.asStateFlow()
 
@@ -29,14 +32,19 @@ class MapViewModel(
     fun loadItems() {
         if (isLoading) return
         isLoading = true
+        _error.value = null
         viewModelScope.launch {
             println("MapViewModel: Starting loadItems...")
             try {
                 val result = repository.getHeritageItems()
                 println("MapViewModel: Loaded ${result.size} items")
                 _items.value = result
+                if (result.isEmpty()) {
+                    // Optionally set error if empty list means failure in your context
+                }
             } catch (e: Exception) {
                 println("MapViewModel: Error: ${e.message}")
+                _error.value = "Server unreachable"
             } finally {
                 isLoading = false
             }

@@ -10,30 +10,39 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import com.aleskrot.zabytki.BuildKonfig
 import com.aleskrot.zabytki.getPlatform
 import com.aleskrot.zabytki.data.repository.HeritageRemoteRepository
 import com.aleskrot.zabytki.data.repository.createHttpClient
 import com.aleskrot.zabytki.domain.model.HeritageItem
+import com.aleskrot.zabytki.presentation.components.ErrorOverlay
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.compose.layers.CircleLayer
+import org.maplibre.compose.layers.SymbolLayer
 import org.maplibre.compose.map.*
 import org.maplibre.compose.sources.GeoJsonData
+import org.maplibre.compose.sources.GeoJsonOptions
 import org.maplibre.compose.sources.rememberGeoJsonSource
 import org.maplibre.compose.style.BaseStyle
 import org.maplibre.compose.util.ClickResult
 import org.maplibre.spatialk.geojson.Position
+import kotlinx.serialization.json.*
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
+import org.maplibre.compose.expressions.dsl.*
 
 @Composable
 fun MapScreen() {
-    println("MapScreen: Start")
     val isWeb = remember { getPlatform().name.contains("Web") }
     val httpClient = remember { createHttpClient() }
     val repository = remember { HeritageRemoteRepository(httpClient) }
     val viewModel = remember { MapViewModel(repository) }
     
     val items by viewModel.items.collectAsState()
+    val error by viewModel.error.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
 
     val variant = if (isSystemInDarkTheme()) "dark" else "light"
@@ -48,134 +57,203 @@ fun MapScreen() {
         )
     )
 
-    val geoJsonData = remember(items) {
-        if (items.isEmpty()) return@remember GeoJsonData.JsonString("""{"type":"FeatureCollection","features":[]}""")
-        
-        val featuresJson = items.joinToString(",") { item ->
-            val pos = item.getPosition()
-            """
-            {
-                "type": "Feature",
-                "geometry": {
-                    "type": "Point",
-                    "coordinates": [${pos?.longitude ?: 0.0}, ${pos?.latitude ?: 0.0}]
-                },
-                "properties": {
-                    "id": "${item.item}",
-                    "label": "${item.itemLabel.replace("\"", "'")}"
-                }
+    val isDesktop = remember { !isWeb && getPlatform().name.contains("Java") }
+    var baseStyleJson by remember { mutableStateOf<String?>(null) }
+    var desktopStyleJson by remember { mutableStateOf<String?>(null) }
+
+    // 1. GeoJSON string for items
+    val geoJsonString = remember(items) {
+        if (items.isEmpty()) return@remember null
+        val features = items.mapNotNull { item ->
+            val pos = item.getPosition() ?: return@mapNotNull null
+            buildJsonObject {
+                put("type", "Feature")
+                put("geometry", buildJsonObject {
+                    put("type", "Point")
+                    put("coordinates", buildJsonArray { add(pos.longitude); add(pos.latitude) })
+                })
+                put("properties", buildJsonObject {
+                    put("id", item.item)
+                    put("label", item.itemLabel)
+                })
+                put("id", item.item)
             }
-            """.trimIndent()
         }
-        
-        GeoJsonData.JsonString("""{"type":"FeatureCollection","features":[$featuresJson]}""")
+        buildJsonObject {
+            put("type", "FeatureCollection")
+            put("features", JsonArray(features))
+        }.toString()
+    }
+
+    // 2. Desktop only: Fetch and prepare style with injection
+    LaunchedEffect(mapTilerKey, styleId) {
+        if (isDesktop && mapTilerKey.isNotEmpty()) {
+            try {
+                baseStyleJson = httpClient.get(styleUrl).bodyAsText()
+            } catch (e: Exception) {
+                println("Error fetching style: ${e.message}")
+            }
+        }
+    }
+
+    LaunchedEffect(geoJsonString, baseStyleJson) {
+        if (isDesktop && baseStyleJson != null && geoJsonString != null) {
+            try {
+                val json = Json { ignoreUnknownKeys = true }
+                val styleObj = json.parseToJsonElement(baseStyleJson!!).jsonObject.toMutableMap()
+                val sources = styleObj["sources"]?.jsonObject?.toMutableMap() ?: mutableMapOf()
+                
+                sources["heritage-source"] = buildJsonObject {
+                    put("type", "geojson")
+                    put("data", json.parseToJsonElement(geoJsonString))
+                    put("cluster", true)
+                    put("clusterMaxZoom", 14)
+                    put("clusterRadius", 50)
+                }
+                styleObj["sources"] = JsonObject(sources)
+                
+                val layers = styleObj["layers"]?.jsonArray?.toMutableList() ?: mutableListOf()
+                
+                // Add layers manually for desktop style
+                layers.add(buildJsonObject {
+                    put("id", "heritage-clusters")
+                    put("type", "circle")
+                    put("source", "heritage-source")
+                    put("filter", buildJsonArray { add("has"); add("point_count") })
+                    putJsonObject("paint") {
+                        put("circle-color", "#51bbd6")
+                        put("circle-radius", buildJsonArray {
+                            add("step"); add(buildJsonArray { add("get"); add("point_count") })
+                            add(20.0); add(100.0); add(30.0); add(750.0); add(40.0)
+                        })
+                    }
+                })
+                layers.add(buildJsonObject {
+                    put("id", "heritage-cluster-count")
+                    put("type", "symbol")
+                    put("source", "heritage-source")
+                    put("filter", buildJsonArray { add("has"); add("point_count") })
+                    putJsonObject("layout") {
+                        put("text-field", "{point_count_abbreviated}")
+                        put("text-size", 12)
+                    }
+                    putJsonObject("paint") { put("text-color", "#ffffff") }
+                })
+                layers.add(buildJsonObject {
+                    put("id", "heritage-points")
+                    put("type", "circle")
+                    put("source", "heritage-source")
+                    put("filter", buildJsonArray { add("!"); add(buildJsonArray { add("has"); add("point_count") }) })
+                    putJsonObject("paint") {
+                        put("circle-color", "#FF0000")
+                        put("circle-radius", 8)
+                    }
+                })
+                
+                styleObj["layers"] = JsonArray(layers)
+                desktopStyleJson = JsonObject(styleObj).toString()
+            } catch (e: Exception) { }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (mapTilerKey.isEmpty()) {
-            Text("Error: MAPTILER_KEY is missing", color = Color.Red, modifier = Modifier.align(Alignment.Center))
+        val style = if (isDesktop && desktopStyleJson != null) {
+            BaseStyle.Json(desktopStyleJson!!)
         } else {
-            MaplibreMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraState = camera,
-                baseStyle = BaseStyle.Uri(styleUrl)
-            ) {
-                if (!isWeb) {
-                    val source = rememberGeoJsonSource(data = geoJsonData)
-                    CircleLayer(
-                        id = "heritage-points",
-                        source = source,
-                        color = org.maplibre.compose.expressions.dsl.const(Color.Red),
-                        radius = org.maplibre.compose.expressions.dsl.const(10.dp),
-                        onClick = { features ->
-                            val clickedId = features.firstOrNull()?.properties?.get("id")?.toString()
-                            val item = items.find { it.item == clickedId }
-                            if (item != null) {
-                                viewModel.onMarkerClick(item)
-                                ClickResult.Consume
-                            } else {
-                                ClickResult.Pass
-                            }
-                        }
-                    )
-                }
-            }
+            BaseStyle.Uri(styleUrl)
         }
 
-        // Дыягнастычная панэль
-        Card(
-            modifier = Modifier.padding(16.dp).align(Alignment.TopStart),
-            colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.7f))
-        ) {
-            Column(modifier = Modifier.padding(8.dp)) {
-                Text("Items from server: ${items.size}", color = if (items.isEmpty()) Color.Red else Color.Green, style = MaterialTheme.typography.labelSmall)
-                if (items.isNotEmpty()) {
-                    Text("First: ${items.first().itemLabel}", color = Color.White, style = MaterialTheme.typography.labelSmall)
+        MaplibreMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraState = camera,
+            baseStyle = style,
+            onMapClick = { _, offset ->
+                val projection = camera.projection ?: return@MaplibreMap ClickResult.Pass
+                val clickX = offset.x.value
+                val clickY = offset.y.value
+                val threshold = 25.0
+                val pointsNear = items.filter { item ->
+                    val pos = item.getPosition() ?: return@filter false
+                    val screenLoc = projection.screenLocationFromPosition(pos)
+                    val dx = screenLoc.x.value - clickX
+                    val dy = screenLoc.y.value - clickY
+                    dx * dx + dy * dy < threshold * threshold
                 }
-                if (isWeb) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text("Web target: Markers disabled (GeoJSON not yet supported)", color = Color.Yellow, style = MaterialTheme.typography.labelSmall)
+                if (pointsNear.isNotEmpty()) {
+                    pointsNear.minByOrNull { item ->
+                        val pos = item.getPosition()!!
+                        val screenLoc = projection.screenLocationFromPosition(pos)
+                        val dx = screenLoc.x.value - clickX
+                        val dy = screenLoc.y.value - clickY
+                        dx * dx + dy * dy
+                    }?.let { viewModel.onMarkerClick(it) }
+                    ClickResult.Consume
+                } else ClickResult.Pass
+            }
+        ) {
+            // DSL Layers ONLY for Android/Web (to avoid "Not implemented" on Desktop)
+            if (!isDesktop) {
+                geoJsonString?.let { json ->
+                    key(json) {
+                        val source = rememberGeoJsonSource(
+                            data = GeoJsonData.JsonString(json),
+                            options = GeoJsonOptions(cluster = true, clusterMaxZoom = 14, clusterRadius = 50)
+                        )
+                        CircleLayer(
+                            id = "heritage-clusters",
+                            source = source,
+                            filter = feature.has("point_count"),
+                            color = const(Color(0xFF51BBD6)),
+                            radius = const(20.dp)
+                        )
+                        SymbolLayer(
+                            id = "heritage-cluster-count",
+                            source = source,
+                            filter = feature.has("point_count"),
+                            textField = format(span(feature["point_count_abbreviated"].convertToString())),
+                            textColor = const(Color.White)
+                        )
+                        CircleLayer(
+                            id = "heritage-points",
+                            source = source,
+                            filter = !feature.has("point_count"),
+                            color = const(Color.Red),
+                            radius = const(10.dp)
+                        )
+                    }
                 }
             }
         }
 
         selectedItem?.let { item ->
-            HeritageInfoPopup(
-                item = item,
-                onDismiss = { viewModel.onDismissPopup() }
+            HeritageInfoPopup(item = item, onDismiss = { viewModel.onDismissPopup() })
+        }
+
+        error?.let { errorMsg ->
+            ErrorOverlay(
+                message = errorMsg,
+                onRetry = { viewModel.loadItems() }
             )
         }
     }
 }
 
 @Composable
-fun HeritageInfoPopup(
-    item: HeritageItem,
-    onDismiss: () -> Unit
-) {
+fun HeritageInfoPopup(item: HeritageItem, onDismiss: () -> Unit) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
-            .padding(32.dp),
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).padding(32.dp),
         contentAlignment = Alignment.Center
     ) {
         Card(
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.fillMaxWidth().wrapContentHeight(),
-            elevation = CardDefaults.cardElevation(8.dp)
+            modifier = Modifier.fillMaxWidth().wrapContentHeight()
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = item.itemLabel,
-                    style = MaterialTheme.typography.headlineSmall
-                )
+            Column(modifier = Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text = item.itemLabel, style = MaterialTheme.typography.headlineSmall)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = item.categoryLabel,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                
-                if (item.image.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Image URL: ${item.image}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.Blue
-                    )
-                }
-                
+                Text(text = item.categoryLabel, style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Закрыць")
-                }
+                Button(onClick = onDismiss) { Text("Close") }
             }
         }
     }

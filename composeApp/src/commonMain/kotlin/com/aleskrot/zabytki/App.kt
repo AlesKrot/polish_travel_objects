@@ -9,10 +9,8 @@ import com.aleskrot.zabytki.presentation.map.MapScreen
 
 @Composable
 fun App() {
-    println("App: Composition started")
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            println("App: Navigating to MapScreen")
             MapScreen()
         }
     }
