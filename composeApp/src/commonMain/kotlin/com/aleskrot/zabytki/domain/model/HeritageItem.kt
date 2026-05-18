@@ -12,6 +12,16 @@ data class HeritageItem(
     val image: String = ""          // URL image
 ) {
     /**
+     * Returns the image URL using HTTPS if it's currently HTTP.
+     */
+    fun getImageUrl(): String {
+        return if (image.startsWith("http://")) {
+            image.replaceFirst("http://", "https://")
+        } else {
+            image
+        }
+    }
+    /**
      * Parses the "Point(lon lat)" string into a Position object.
      */
     fun getPosition(): Position? {

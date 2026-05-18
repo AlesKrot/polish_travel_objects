@@ -40,7 +40,19 @@ class HeritageRemoteRepository(
             println("HeritageRemoteRepository: Response status: ${response.status}")
             
             val items: List<HeritageItem> = withContext(Dispatchers.Default) {
-                response.body()
+                val fetchedItems: List<HeritageItem> = response.body()
+                fetchedItems.map { item ->
+                    if (item.image.contains("/wiki/Special:FilePath/")) {
+                        val fileName = item.image.substringAfter("/wiki/Special:FilePath/")
+                        // Direct thumbnail URL is much more stable for Coil
+                        val directUrl = "https://commons.wikimedia.org/w/thumb.php?f=$fileName&w=800"
+                        item.copy(image = directUrl)
+                    } else if (item.image.startsWith("http://")) {
+                        item.copy(image = item.image.replaceFirst("http://", "https://"))
+                    } else {
+                        item
+                    }
+                }
             }
             println("HeritageRemoteRepository: Successfully fetched ${items.size} items")
             

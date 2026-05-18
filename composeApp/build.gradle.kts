@@ -60,12 +60,27 @@ kotlin {
         browser()
         binaries.executable()
     }
+
+    @OptIn(ExperimentalWasmDsl::class)
+    wasmJs {
+        browser()
+        binaries.executable()
+    }
     
     sourceSets {
+        val commonMain by getting
+        val mapMain by creating {
+            dependsOn(commonMain)
+        }
+        androidMain.get().dependsOn(mapMain)
+        jvmMain.get().dependsOn(mapMain)
+        jsMain.get().dependsOn(mapMain)
+
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.maplibre.compose)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -76,13 +91,20 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(libs.maplibre.compose)
+            implementation("org.maplibre.spatialk:geojson:0.7.0")
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.ktor.client.logging)
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor)
         }
         jsMain.dependencies {
+            implementation(libs.ktor.client.js)
+            implementation(npm("maplibre-gl", "4.7.1"))
+            implementation(libs.maplibre.compose)
+        }
+        wasmJsMain.dependencies {
             implementation(libs.ktor.client.js)
             implementation(npm("maplibre-gl", "4.7.1"))
         }
@@ -93,6 +115,7 @@ kotlin {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
             implementation(libs.ktor.client.okhttp)
+            implementation(libs.maplibre.compose)
             runtimeOnly("org.maplibre.compose:maplibre-native-bindings-jni:0.12.1") {
                 capabilities {
                     requireCapability("org.maplibre.compose:maplibre-native-bindings-jni-${detectTarget()}")
