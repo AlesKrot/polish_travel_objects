@@ -4,17 +4,28 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.aleskrot.zabytki.domain.model.HeritageItem
 import com.aleskrot.zabytki.domain.repository.HeritageRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class MapViewModel(
     private val repository: HeritageRepository
 ) : ViewModel() {
 
-    private val _items = MutableStateFlow<List<HeritageItem>>(emptyList())
-    val items: StateFlow<List<HeritageItem>> = _items.asStateFlow()
+    private val _allItems = MutableStateFlow<List<HeritageItem>>(emptyList())
+    
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _selectedCategory = MutableStateFlow<String?>(null)
+    val selectedCategory: StateFlow<String?> = _selectedCategory.asStateFlow()
+
+    val items: StateFlow<List<HeritageItem>> = combine(_allItems, _searchQuery, _selectedCategory) { items, query, category ->
+        items.filter { item ->
+            val matchesQuery = query.isEmpty() || item.itemLabel.contains(query, ignoreCase = true)
+            val matchesCategory = category == null || item.categoryLabel == category
+            matchesQuery && matchesCategory
+        }
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
@@ -25,7 +36,6 @@ class MapViewModel(
     private var isLoading = false
 
     init {
-        println("MapViewModel: init block")
         loadItems()
     }
 
@@ -34,21 +44,23 @@ class MapViewModel(
         isLoading = true
         _error.value = null
         viewModelScope.launch {
-            println("MapViewModel: Starting loadItems...")
             try {
                 val result = repository.getHeritageItems()
-                println("MapViewModel: Loaded ${result.size} items")
-                _items.value = result
-                if (result.isEmpty()) {
-                    // Optionally set error if empty list means failure in your context
-                }
+                _allItems.value = result
             } catch (e: Exception) {
-                println("MapViewModel: Error: ${e.message}")
                 _error.value = "Server unreachable"
             } finally {
                 isLoading = false
             }
         }
+    }
+
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun onCategorySelect(category: String?) {
+        _selectedCategory.value = if (_selectedCategory.value == category) null else category
     }
 
     fun onMarkerClick(item: HeritageItem) {
@@ -57,5 +69,9 @@ class MapViewModel(
 
     fun onDismissPopup() {
         _selectedItem.value = null
+    }
+
+    fun getCategories(): List<String> {
+        return _allItems.value.map { it.categoryLabel }.distinct().sorted()
     }
 }

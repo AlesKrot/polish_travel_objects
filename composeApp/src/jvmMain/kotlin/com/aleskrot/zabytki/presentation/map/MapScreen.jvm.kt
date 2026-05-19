@@ -4,14 +4,22 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogWindow
+import androidx.compose.ui.window.rememberDialogState
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.unit.IntOffset
 import com.aleskrot.zabytki.BuildKonfig
 import com.aleskrot.zabytki.data.repository.HeritageRemoteRepository
 import com.aleskrot.zabytki.data.repository.createHttpClient
 import com.aleskrot.zabytki.presentation.components.ErrorOverlay
 import com.aleskrot.zabytki.presentation.components.HeritageInfoPopup
+import com.aleskrot.zabytki.presentation.map.components.MapControls
+import com.aleskrot.zabytki.presentation.map.components.MapSearchBar
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.compose.map.*
@@ -21,17 +29,18 @@ import org.maplibre.spatialk.geojson.Position
 import kotlinx.serialization.json.*
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
-
-import androidx.compose.ui.window.DialogWindow
-import androidx.compose.ui.window.rememberDialogState
+import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.launch
 
 @Composable
 actual fun MapScreen() {
     val httpClient = remember { createHttpClient() }
     val repository = remember { HeritageRemoteRepository(httpClient) }
     val viewModel = remember { MapViewModel(repository) }
+    val coroutineScope = rememberCoroutineScope()
     
     val items by viewModel.items.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val error by viewModel.error.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
 
@@ -40,17 +49,16 @@ actual fun MapScreen() {
     val styleId = if (variant == "dark") "darkmatter" else "streets-v2"
     val styleUrl = "https://api.maptiler.com/maps/$styleId/style.json?key=$mapTilerKey"
     
-    val camera = rememberCameraState(
-        firstPosition = CameraPosition(
-            target = Position(longitude = 21.0122, latitude = 52.2297),
-            zoom = 10.0
-        )
+    val initialPosition = CameraPosition(
+        target = Position(longitude = 21.0122, latitude = 52.2297),
+        zoom = 10.0
     )
+    val camera = rememberCameraState(firstPosition = initialPosition)
 
     var baseStyleJson by remember { mutableStateOf<String?>(null) }
     var desktopStyleJson by remember { mutableStateOf<String?>(null) }
 
-    // 1. GeoJSON string for items
+    // GeoJSON string generation
     val geoJsonString = remember(items) {
         if (items.isEmpty()) return@remember null
         val features = items.mapNotNull { item ->
@@ -74,14 +82,11 @@ actual fun MapScreen() {
         }.toString()
     }
 
-    // 2. Fetch and prepare style with injection
     LaunchedEffect(mapTilerKey, styleId) {
         if (mapTilerKey.isNotEmpty()) {
             try {
                 baseStyleJson = httpClient.get(styleUrl).bodyAsText()
-            } catch (e: Exception) {
-                println("Error fetching style: ${e.message}")
-            }
+            } catch (e: Exception) { }
         }
     }
 
@@ -103,7 +108,6 @@ actual fun MapScreen() {
                 
                 val layers = styleObj["layers"]?.jsonArray?.toMutableList() ?: mutableListOf()
                 
-                // Add layers manually for desktop style
                 layers.add(buildJsonObject {
                     put("id", "heritage-clusters")
                     put("type", "circle")
@@ -178,14 +182,20 @@ actual fun MapScreen() {
                 }
                 
                 if (pointsNear.isNotEmpty()) {
-                    val closest = pointsNear.minByOrNull { item ->
-                        val pos = item.getPosition()!!
-                        val dLon = pos.longitude - clickPos.longitude
-                        val dLat = pos.latitude - clickPos.latitude
-                        dLon * dLon + dLat * dLat
-                    }
-                    closest?.let { 
-                        viewModel.onMarkerClick(it) 
+                    val firstPos = pointsNear.first().getPosition()
+                    val allSameLocation = pointsNear.all { it.getPosition() == firstPos }
+                    
+                    if (pointsNear.size > 1 && !allSameLocation) {
+                        val currentZoom = camera.position.zoom
+                        val nextZoom = (currentZoom + 2.5).coerceAtMost(18.0)
+                        coroutineScope.launch {
+                            camera.animateTo(
+                                CameraPosition(target = clickPos, zoom = nextZoom),
+                                duration = 500.milliseconds
+                            )
+                        }
+                    } else {
+                        viewModel.onMarkerClick(pointsNear.first())
                     }
                     ClickResult.Consume
                 } else {
@@ -193,6 +203,48 @@ actual fun MapScreen() {
                 }
             }
         )
+
+        // On Desktop, UI elements must be in Popups to stay above the native map view
+        Popup(
+            alignment = Alignment.TopCenter,
+            offset = IntOffset(0, 16),
+            properties = PopupProperties(focusable = true)
+        ) {
+            MapSearchBar(
+                query = searchQuery,
+                onQueryChange = { viewModel.onSearchQueryChange(it) },
+                modifier = Modifier.width(400.dp)
+            )
+        }
+
+        Popup(
+            alignment = Alignment.CenterEnd,
+            offset = IntOffset(-16, 0)
+        ) {
+            MapControls(
+                onZoomIn = {
+                    coroutineScope.launch {
+                        camera.animateTo(
+                            camera.position.copy(zoom = (camera.position.zoom + 1.0).coerceAtMost(20.0)),
+                            duration = 300.milliseconds
+                        )
+                    }
+                },
+                onZoomOut = {
+                    coroutineScope.launch {
+                        camera.animateTo(
+                            camera.position.copy(zoom = (camera.position.zoom - 1.0).coerceAtLeast(1.0)),
+                            duration = 300.milliseconds
+                        )
+                    }
+                },
+                onReset = {
+                    coroutineScope.launch {
+                        camera.animateTo(initialPosition, duration = 500.milliseconds)
+                    }
+                }
+            )
+        }
 
         selectedItem?.let { item ->
             DialogWindow(
@@ -207,10 +259,12 @@ actual fun MapScreen() {
         }
 
         error?.let { errorMsg ->
-            ErrorOverlay(
-                message = errorMsg,
-                onRetry = { viewModel.loadItems() }
-            )
+            Popup(alignment = Alignment.Center) {
+                ErrorOverlay(
+                    message = errorMsg,
+                    onRetry = { viewModel.loadItems() }
+                )
+            }
         }
     }
 }
