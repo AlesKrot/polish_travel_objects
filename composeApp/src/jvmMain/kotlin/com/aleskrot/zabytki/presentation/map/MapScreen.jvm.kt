@@ -260,7 +260,11 @@ actual fun MapScreen() {
                 resizable = false,
                 focusable = true
             ) {
-                HeritageInfoPopup(item = item, onDismiss = { viewModel.onDismissPopup() })
+                HeritageInfoPopup(
+                    item = item,
+                    onDismiss = { viewModel.onDismissPopup() },
+                    onDelete = { viewModel.deleteItem(item) }
+                )
             }
         }
 

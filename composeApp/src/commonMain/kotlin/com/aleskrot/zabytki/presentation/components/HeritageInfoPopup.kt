@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,7 +26,39 @@ import coil3.request.crossfade
 import com.aleskrot.zabytki.domain.model.HeritageItem
 
 @Composable
-fun HeritageInfoPopup(item: HeritageItem, onDismiss: () -> Unit) {
+fun HeritageInfoPopup(
+    item: HeritageItem,
+    onDismiss: () -> Unit,
+    onDelete: (() -> Unit)? = null
+) {
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
+
+    if (showDeleteConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = { Text("Confirm decision") },
+            text = { Text("Are you sure to delete this object?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmation = false
+                        onDelete?.invoke()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Yes", color = Color.White)
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showDeleteConfirmation = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -50,59 +84,76 @@ fun HeritageInfoPopup(item: HeritageItem, onDismiss: () -> Unit) {
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (item.image.isNotEmpty()) {
-                    SubcomposeAsyncImage(
-                        model = ImageRequest.Builder(LocalPlatformContext.current)
-                            .data(item.image)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = item.itemLabel,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .clip(RoundedCornerShape(16.dp)),
-                        contentScale = ContentScale.Crop,
-                        loading = {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator()
+            Box {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (item.image.isNotEmpty()) {
+                        SubcomposeAsyncImage(
+                            model = ImageRequest.Builder(LocalPlatformContext.current)
+                                .data(item.image)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = item.itemLabel,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(16.dp)),
+                            contentScale = ContentScale.Crop,
+                            loading = {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
+                            },
+                            error = {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Text("Image error", color = MaterialTheme.colorScheme.error)
+                                }
                             }
-                        },
-                        error = {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("Image error", color = MaterialTheme.colorScheme.error)
-                            }
-                        }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    AutoResizeText(
+                        text = item.itemLabel,
+                        style = MaterialTheme.typography.headlineMedium,
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 2
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = item.categoryLabel,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Text("Close")
+                    }
                 }
 
-                AutoResizeText(
-                    text = item.itemLabel,
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 2
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = item.categoryLabel,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) {
-                    Text("Close")
+                if (onDelete != null) {
+                    IconButton(
+                        onClick = { showDeleteConfirmation = true },
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = Color.Red
+                        )
+                    }
                 }
             }
         }

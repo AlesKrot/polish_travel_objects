@@ -189,7 +189,11 @@ actual fun MapScreen() {
         )
 
         selectedItem?.let { item ->
-            HeritageInfoPopup(item = item, onDismiss = { viewModel.onDismissPopup() })
+            HeritageInfoPopup(
+                item = item,
+                onDismiss = { viewModel.onDismissPopup() },
+                onDelete = { viewModel.deleteItem(item) }
+            )
         }
 
         pendingNewPosition?.let { position ->

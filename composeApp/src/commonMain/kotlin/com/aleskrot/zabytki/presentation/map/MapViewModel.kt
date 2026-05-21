@@ -101,11 +101,25 @@ class MapViewModel(
         viewModelScope.launch {
             try {
                 repository.addHeritageItem(newItem)
-                // Refresh list
-                val result = repository.getHeritageItems()
+                // Refresh list forcing server request
+                val result = repository.getHeritageItems(forceRefresh = true)
                 _allItems.value = result
             } catch (e: Exception) {
                 _error.value = "Failed to add item: ${e.message}"
+            }
+        }
+    }
+
+    fun deleteItem(item: HeritageItem) {
+        viewModelScope.launch {
+            try {
+                repository.deleteHeritageItem(item.item)
+                _selectedItem.value = null
+                // Refresh list forcing server request
+                val result = repository.getHeritageItems(forceRefresh = true)
+                _allItems.value = result
+            } catch (e: Exception) {
+                _error.value = "Failed to delete item: ${e.message}"
             }
         }
     }

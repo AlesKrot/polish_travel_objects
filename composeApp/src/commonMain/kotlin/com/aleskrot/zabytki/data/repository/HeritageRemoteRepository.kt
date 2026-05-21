@@ -33,12 +33,17 @@ class HeritageRemoteRepository(
         }
     }
 
-    override suspend fun getHeritageItems(): List<HeritageItem> {
+    override suspend fun getHeritageItems(forceRefresh: Boolean): List<HeritageItem> {
         return try {
             val url = "$baseUrl/heritage"
-            println("HeritageRemoteRepository: Fetching from $url")
+            println("HeritageRemoteRepository: Fetching from $url (forceRefresh=$forceRefresh)")
             
-            val response = httpClient.get(url)
+            val response = httpClient.get(url) {
+                if (forceRefresh) {
+                    // This forces Ktor's HttpCache and some proxies to bypass cached data
+                    header(io.ktor.http.HttpHeaders.CacheControl, "no-cache")
+                }
+            }
             println("HeritageRemoteRepository: Response status: ${response.status}")
             
             val items: List<HeritageItem> = withContext(Dispatchers.Default) {
@@ -87,6 +92,20 @@ class HeritageRemoteRepository(
             }
             if (response.status.value !in 200..299) {
                 throw Exception("Failed to add item: ${response.status}")
+            }
+        }
+    }
+
+    override suspend fun deleteHeritageItem(id: String) {
+        withContext(Dispatchers.Default) {
+            val cleanBaseUrl = baseUrl.removeSuffix("/")
+            val response = httpClient.delete("$cleanBaseUrl/heritage") {
+                url {
+                    parameters.append("id", id)
+                }
+            }
+            if (response.status.value !in 200..299) {
+                throw Exception("Failed to delete item: ${response.status}")
             }
         }
     }

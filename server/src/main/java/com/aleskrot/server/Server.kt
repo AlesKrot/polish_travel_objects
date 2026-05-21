@@ -44,10 +44,12 @@ fun main() {
         install(CORS) {
             anyHost()
             allowHeader(HttpHeaders.ContentType)
-            allowMethod(HttpMethod.Options)
+            allowHeader(HttpHeaders.AccessControlAllowOrigin)
+            allowMethod(HttpMethod.Get)
+            allowMethod(HttpMethod.Post)
             allowMethod(HttpMethod.Put)
-            allowMethod(HttpMethod.Patch)
             allowMethod(HttpMethod.Delete)
+            allowMethod(HttpMethod.Options)
         }
         routing {
             heritageRoutes(repository)

@@ -3,6 +3,7 @@ package com.aleskrot.server.repository
 import com.aleskrot.server.database.HeritageTable
 import com.aleskrot.server.models.HeritageItem
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class HeritageRepository {
@@ -27,5 +28,9 @@ class HeritageRepository {
             it[HeritageTable.categoryLabel] = item.categoryLabel
             it[HeritageTable.image] = item.image
         }
+    }
+
+    suspend fun deleteItem(id: String) = transaction {
+        HeritageTable.deleteWhere { HeritageTable.item eq id }
     }
 }
