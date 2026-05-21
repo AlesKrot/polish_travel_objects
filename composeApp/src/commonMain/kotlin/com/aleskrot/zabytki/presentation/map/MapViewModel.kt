@@ -6,6 +6,8 @@ import com.aleskrot.zabytki.domain.model.HeritageItem
 import com.aleskrot.zabytki.domain.repository.HeritageRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.maplibre.spatialk.geojson.Position
+import kotlinx.datetime.Clock
 
 class MapViewModel(
     private val repository: HeritageRepository
@@ -33,6 +35,9 @@ class MapViewModel(
     private val _selectedItem = MutableStateFlow<HeritageItem?>(null)
     val selectedItem: StateFlow<HeritageItem?> = _selectedItem.asStateFlow()
 
+    private val _pendingNewPosition = MutableStateFlow<Position?>(null)
+    val pendingNewPosition: StateFlow<Position?> = _pendingNewPosition.asStateFlow()
+
     private var isLoading = false
 
     init {
@@ -40,7 +45,7 @@ class MapViewModel(
     }
 
     fun loadItems() {
-        if (isLoading) return
+        if (isLoading || _allItems.value.isNotEmpty()) return
         isLoading = true
         _error.value = null
         viewModelScope.launch {
@@ -48,7 +53,9 @@ class MapViewModel(
                 val result = repository.getHeritageItems()
                 _allItems.value = result
             } catch (e: Exception) {
-                _error.value = "Server unreachable"
+                if (_allItems.value.isEmpty()) {
+                    _error.value = "Server unreachable"
+                }
             } finally {
                 isLoading = false
             }
@@ -69,6 +76,38 @@ class MapViewModel(
 
     fun onDismissPopup() {
         _selectedItem.value = null
+    }
+
+    fun onMapLongClick(position: Position) {
+        _pendingNewPosition.value = position
+    }
+
+    fun onDismissAddDialog() {
+        _pendingNewPosition.value = null
+    }
+
+    fun addNewItem(name: String, category: String, imageUrl: String) {
+        val pos = _pendingNewPosition.value ?: return
+        _pendingNewPosition.value = null
+        
+        val newItem = HeritageItem(
+            item = "custom-${Clock.System.now().toEpochMilliseconds()}",
+            itemLabel = name,
+            categoryLabel = category,
+            coords = "Point(${pos.longitude} ${pos.latitude})",
+            image = imageUrl
+        )
+
+        viewModelScope.launch {
+            try {
+                repository.addHeritageItem(newItem)
+                // Refresh list
+                val result = repository.getHeritageItems()
+                _allItems.value = result
+            } catch (e: Exception) {
+                _error.value = "Failed to add item: ${e.message}"
+            }
+        }
     }
 
     fun getCategories(): List<String> {

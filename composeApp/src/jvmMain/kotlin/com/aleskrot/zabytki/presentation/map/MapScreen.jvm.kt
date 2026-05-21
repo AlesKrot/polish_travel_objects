@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.IntOffset
 import com.aleskrot.zabytki.BuildKonfig
 import com.aleskrot.zabytki.data.repository.HeritageRemoteRepository
 import com.aleskrot.zabytki.data.repository.createHttpClient
+import com.aleskrot.zabytki.presentation.components.AddHeritageDialog
 import com.aleskrot.zabytki.presentation.components.ErrorOverlay
 import com.aleskrot.zabytki.presentation.components.HeritageInfoPopup
 import com.aleskrot.zabytki.presentation.map.components.MapControls
@@ -43,6 +44,7 @@ actual fun MapScreen() {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val error by viewModel.error.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
+    val pendingNewPosition by viewModel.pendingNewPosition.collectAsState()
 
     val variant = if (isSystemInDarkTheme()) "dark" else "light"
     val mapTilerKey = BuildKonfig.MAPTILER_KEY
@@ -160,6 +162,10 @@ actual fun MapScreen() {
             modifier = Modifier.fillMaxSize(),
             cameraState = camera,
             baseStyle = style,
+            onMapLongClick = { clickPos, _ ->
+                viewModel.onMapLongClick(clickPos)
+                ClickResult.Consume
+            },
             onMapClick = { clickPos, offset ->
                 val projection = camera.projection
                 val clickX = offset.x.value
@@ -255,6 +261,24 @@ actual fun MapScreen() {
                 focusable = true
             ) {
                 HeritageInfoPopup(item = item, onDismiss = { viewModel.onDismissPopup() })
+            }
+        }
+
+        pendingNewPosition?.let { position ->
+            DialogWindow(
+                onCloseRequest = { viewModel.onDismissAddDialog() },
+                state = rememberDialogState(width = 500.dp, height = 450.dp),
+                title = "Дадаць новы аб'ект",
+                resizable = false,
+                focusable = true
+            ) {
+                AddHeritageDialog(
+                    position = position,
+                    onDismiss = { viewModel.onDismissAddDialog() },
+                    onAdd = { name, category, imageUrl ->
+                        viewModel.addNewItem(name, category, imageUrl)
+                    }
+                )
             }
         }
 

@@ -10,6 +10,8 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.cachingheaders.*
+import io.ktor.http.content.*
 import io.ktor.server.routing.*
 import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
@@ -33,6 +35,11 @@ fun main() {
     embeddedServer(Netty, port = 8080) {
         install(ContentNegotiation) {
             json()
+        }
+        install(CachingHeaders) {
+            options { _, _ ->
+                CachingOptions(CacheControl.MaxAge(maxAgeSeconds = 3600))
+            }
         }
         install(CORS) {
             anyHost()

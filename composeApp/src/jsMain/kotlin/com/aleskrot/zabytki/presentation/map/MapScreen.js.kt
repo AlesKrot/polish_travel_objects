@@ -4,14 +4,18 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.aleskrot.zabytki.BuildKonfig
 import com.aleskrot.zabytki.data.repository.HeritageRemoteRepository
 import com.aleskrot.zabytki.data.repository.createHttpClient
+import com.aleskrot.zabytki.presentation.components.AddHeritageDialog
 import com.aleskrot.zabytki.presentation.components.ErrorOverlay
 import com.aleskrot.zabytki.presentation.components.HeritageInfoPopup
+import com.aleskrot.zabytki.presentation.map.components.MapControls
+import com.aleskrot.zabytki.presentation.map.components.MapSearchBar
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.compose.layers.CircleLayer
@@ -25,28 +29,32 @@ import org.maplibre.compose.util.ClickResult
 import org.maplibre.spatialk.geojson.Position
 import kotlinx.serialization.json.*
 import org.maplibre.compose.expressions.dsl.*
+import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.launch
 
 @Composable
 actual fun MapScreen() {
     val httpClient = remember { createHttpClient() }
     val repository = remember { HeritageRemoteRepository(httpClient) }
     val viewModel = remember { MapViewModel(repository) }
+    val coroutineScope = rememberCoroutineScope()
     
     val items by viewModel.items.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val error by viewModel.error.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
+    val pendingNewPosition by viewModel.pendingNewPosition.collectAsState()
 
     val variant = if (isSystemInDarkTheme()) "dark" else "light"
     val mapTilerKey = BuildKonfig.MAPTILER_KEY
     val styleId = if (variant == "dark") "darkmatter" else "streets-v2"
     val styleUrl = "https://api.maptiler.com/maps/$styleId/style.json?key=$mapTilerKey"
     
-    val camera = rememberCameraState(
-        firstPosition = CameraPosition(
-            target = Position(longitude = 21.0122, latitude = 52.2297),
-            zoom = 10.0
-        )
+    val initialPosition = CameraPosition(
+        target = Position(longitude = 21.0122, latitude = 52.2297),
+        zoom = 10.0
     )
+    val camera = rememberCameraState(firstPosition = initialPosition)
 
     // 1. GeoJSON string for items
     val geoJsonString = remember(items) {
@@ -77,11 +85,16 @@ actual fun MapScreen() {
             modifier = Modifier.fillMaxSize(),
             cameraState = camera,
             baseStyle = BaseStyle.Uri(styleUrl),
-            onMapClick = { _, offset ->
+            onMapLongClick = { clickPos, _ ->
+                viewModel.onMapLongClick(clickPos)
+                ClickResult.Consume
+            },
+            onMapClick = { clickPos, offset ->
                 val projection = camera.projection ?: return@MaplibreMap ClickResult.Pass
                 val clickX = offset.x.value
                 val clickY = offset.y.value
                 val threshold = 25.0
+                
                 val pointsNear = items.filter { item ->
                     val pos = item.getPosition() ?: return@filter false
                     val screenLoc = projection.screenLocationFromPosition(pos)
@@ -89,16 +102,27 @@ actual fun MapScreen() {
                     val dy = screenLoc.y.value - clickY
                     dx * dx + dy * dy < threshold * threshold
                 }
+                
                 if (pointsNear.isNotEmpty()) {
-                    pointsNear.minByOrNull { item ->
-                        val pos = item.getPosition()!!
-                        val screenLoc = projection.screenLocationFromPosition(pos)
-                        val dx = screenLoc.x.value - clickX
-                        val dy = screenLoc.y.value - clickY
-                        dx * dx + dy * dy
-                    }?.let { viewModel.onMarkerClick(it) }
+                    val firstPos = pointsNear.first().getPosition()
+                    val allSameLocation = pointsNear.all { it.getPosition() == firstPos }
+                    
+                    if (pointsNear.size > 1 && !allSameLocation) {
+                        val currentZoom = camera.position.zoom
+                        val nextZoom = (currentZoom + 2.5).coerceAtMost(18.0)
+                        coroutineScope.launch {
+                            camera.animateTo(
+                                CameraPosition(target = clickPos, zoom = nextZoom),
+                                duration = 500.milliseconds
+                            )
+                        }
+                    } else {
+                        viewModel.onMarkerClick(pointsNear.first())
+                    }
                     ClickResult.Consume
-                } else ClickResult.Pass
+                } else {
+                    ClickResult.Pass
+                }
             }
         ) {
             geoJsonString?.let { json ->
@@ -132,8 +156,50 @@ actual fun MapScreen() {
             }
         }
 
+        // UI Overlay
+        MapSearchBar(
+            query = searchQuery,
+            onQueryChange = { viewModel.onSearchQueryChange(it) },
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp).widthIn(max = 600.dp)
+        )
+
+        MapControls(
+            modifier = Modifier.align(Alignment.CenterEnd).padding(bottom = 32.dp),
+            onZoomIn = {
+                coroutineScope.launch {
+                    camera.animateTo(
+                        camera.position.copy(zoom = (camera.position.zoom + 1.0).coerceAtMost(20.0)),
+                        duration = 300.milliseconds
+                    )
+                }
+            },
+            onZoomOut = {
+                coroutineScope.launch {
+                    camera.animateTo(
+                        camera.position.copy(zoom = (camera.position.zoom - 1.0).coerceAtLeast(1.0)),
+                        duration = 300.milliseconds
+                    )
+                }
+            },
+            onReset = {
+                coroutineScope.launch {
+                    camera.animateTo(initialPosition, duration = 500.milliseconds)
+                }
+            }
+        )
+
         selectedItem?.let { item ->
             HeritageInfoPopup(item = item, onDismiss = { viewModel.onDismissPopup() })
+        }
+
+        pendingNewPosition?.let { position ->
+            AddHeritageDialog(
+                position = position,
+                onDismiss = { viewModel.onDismissAddDialog() },
+                onAdd = { name, category, imageUrl ->
+                    viewModel.addNewItem(name, category, imageUrl)
+                }
+            )
         }
 
         error?.let { errorMsg ->

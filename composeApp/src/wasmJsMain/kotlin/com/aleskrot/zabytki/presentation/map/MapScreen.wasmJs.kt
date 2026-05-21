@@ -9,7 +9,10 @@ import androidx.compose.ui.Modifier
 
 @Composable
 actual fun MapScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Map is not supported on Kotlin/Wasm yet. Please use the Kotlin/JS target.")
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("Map is not supported on WasmJS yet. Please use the JS target for web.")
     }
 }

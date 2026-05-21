@@ -16,6 +16,7 @@ import com.aleskrot.zabytki.BuildKonfig
 import com.aleskrot.zabytki.data.repository.HeritageRemoteRepository
 import com.aleskrot.zabytki.data.repository.createHttpClient
 import com.aleskrot.zabytki.domain.model.HeritageItem
+import com.aleskrot.zabytki.presentation.components.AddHeritageDialog
 import com.aleskrot.zabytki.presentation.components.ErrorOverlay
 import com.aleskrot.zabytki.presentation.components.HeritageInfoPopup
 import com.aleskrot.zabytki.presentation.map.components.MapControls
@@ -46,6 +47,7 @@ actual fun MapScreen() {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val error by viewModel.error.collectAsState()
     val selectedItem by viewModel.selectedItem.collectAsState()
+    val pendingNewPosition by viewModel.pendingNewPosition.collectAsState()
 
     val variant = if (isSystemInDarkTheme()) "dark" else "light"
     val mapTilerKey = BuildKonfig.MAPTILER_KEY
@@ -87,6 +89,10 @@ actual fun MapScreen() {
             modifier = Modifier.fillMaxSize(),
             cameraState = camera,
             baseStyle = BaseStyle.Uri(styleUrl),
+            onMapLongClick = { clickPos, _ ->
+                viewModel.onMapLongClick(clickPos)
+                ClickResult.Consume
+            },
             onMapClick = { clickPos, offset ->
                 val projection = camera.projection ?: return@MaplibreMap ClickResult.Pass
                 val clickX = offset.x.value
@@ -188,6 +194,16 @@ actual fun MapScreen() {
 
         selectedItem?.let { item ->
             HeritageInfoPopup(item = item, onDismiss = { viewModel.onDismissPopup() })
+        }
+
+        pendingNewPosition?.let { position ->
+            AddHeritageDialog(
+                position = position,
+                onDismiss = { viewModel.onDismissAddDialog() },
+                onAdd = { name, category, imageUrl ->
+                    viewModel.addNewItem(name, category, imageUrl)
+                }
+            )
         }
 
         error?.let { errorMsg ->

@@ -6,4 +6,5 @@ interface HeritageRepository {
     suspend fun getHeritageItems(): List<HeritageItem>
     suspend fun getHeritageItemById(id: String): HeritageItem?
     suspend fun searchHeritageItems(query: String): List<HeritageItem>
+    suspend fun addHeritageItem(item: HeritageItem)
 }

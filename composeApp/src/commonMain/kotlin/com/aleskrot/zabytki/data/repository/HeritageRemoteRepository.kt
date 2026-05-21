@@ -6,8 +6,10 @@ import com.aleskrot.zabytki.domain.model.HeritageItem
 import com.aleskrot.zabytki.domain.repository.HeritageRepository
 import io.ktor.client.*
 import io.ktor.client.call.*
+import io.ktor.client.plugins.cache.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -76,6 +78,18 @@ class HeritageRemoteRepository(
             it.categoryLabel.contains(query, ignoreCase = true)
         }
     }
+
+    override suspend fun addHeritageItem(item: HeritageItem) {
+        withContext(Dispatchers.Default) {
+            val response = httpClient.post("$baseUrl/heritage") {
+                contentType(io.ktor.http.ContentType.Application.Json)
+                setBody(item)
+            }
+            if (response.status.value !in 200..299) {
+                throw Exception("Failed to add item: ${response.status}")
+            }
+        }
+    }
 }
 
 fun createHttpClient(): HttpClient {
@@ -86,5 +100,6 @@ fun createHttpClient(): HttpClient {
                 useAlternativeNames = false
             })
         }
+        install(HttpCache)
     }
 }
