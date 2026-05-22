@@ -23,6 +23,7 @@ serialization = "2.3.21"
 exposed = "0.59.0"
 h2 = "2.3.232"
 maplibre-compose = "0.12.1"
+kotlinx-datetime = "0.8.0"
 buildkonfig = "0.18.0"
 coil = "3.4.0"
 
@@ -55,6 +56,7 @@ exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "e
 exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
 maplibre-compose = { module = "org.maplibre.compose:maplibre-compose", version.ref = "maplibre-compose" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-client-serialization = { module = "io.ktor:ktor-client-serialization", version.ref = "ktor" }

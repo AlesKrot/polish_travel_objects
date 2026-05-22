@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
@@ -42,6 +43,7 @@ actual fun MapScreen() {
     val repository = remember { HeritageRemoteRepository(httpClient) }
     val viewModel = remember { MapViewModel(repository) }
     val coroutineScope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
     
     val items by viewModel.items.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -90,10 +92,12 @@ actual fun MapScreen() {
             cameraState = camera,
             baseStyle = BaseStyle.Uri(styleUrl),
             onMapLongClick = { clickPos, _ ->
+                focusManager.clearFocus()
                 viewModel.onMapLongClick(clickPos)
                 ClickResult.Consume
             },
             onMapClick = { clickPos, offset ->
+                focusManager.clearFocus()
                 val projection = camera.projection ?: return@MaplibreMap ClickResult.Pass
                 val clickX = offset.x.value
                 val clickY = offset.y.value

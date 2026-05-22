@@ -2,24 +2,26 @@ package com.aleskrot.zabytki.presentation.map
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
-import androidx.compose.ui.window.rememberDialogState
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.window.*
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.DpSize
 import com.aleskrot.zabytki.BuildKonfig
 import com.aleskrot.zabytki.data.repository.HeritageRemoteRepository
 import com.aleskrot.zabytki.data.repository.createHttpClient
+import com.aleskrot.zabytki.presentation.components.AddHeritageContent
 import com.aleskrot.zabytki.presentation.components.AddHeritageDialog
 import com.aleskrot.zabytki.presentation.components.ErrorOverlay
 import com.aleskrot.zabytki.presentation.components.HeritageInfoPopup
 import com.aleskrot.zabytki.presentation.map.components.MapControls
+import com.aleskrot.zabytki.presentation.map.components.MapLegend
 import com.aleskrot.zabytki.presentation.map.components.MapSearchBar
 import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
@@ -39,6 +41,7 @@ actual fun MapScreen() {
     val repository = remember { HeritageRemoteRepository(httpClient) }
     val viewModel = remember { MapViewModel(repository) }
     val coroutineScope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
     
     val items by viewModel.items.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -62,7 +65,11 @@ actual fun MapScreen() {
 
     // GeoJSON string generation
     val geoJsonString = remember(items) {
-        if (items.isEmpty()) return@remember null
+        if (items.isEmpty()) {
+            println("JVM Map: No items to display yet")
+            return@remember null
+        }
+        println("JVM Map: Processing ${items.size} items for GeoJSON")
         val features = items.mapNotNull { item ->
             val pos = item.getPosition() ?: return@mapNotNull null
             buildJsonObject {
@@ -88,7 +95,10 @@ actual fun MapScreen() {
         if (mapTilerKey.isNotEmpty()) {
             try {
                 baseStyleJson = httpClient.get(styleUrl).bodyAsText()
-            } catch (e: Exception) { }
+                println("JVM Map: Base style loaded successfully")
+            } catch (e: Exception) { 
+                println("JVM Map: Error loading base style: ${e.message}")
+            }
         }
     }
 
@@ -147,7 +157,10 @@ actual fun MapScreen() {
                 
                 styleObj["layers"] = JsonArray(layers)
                 desktopStyleJson = JsonObject(styleObj).toString()
-            } catch (e: Exception) { }
+                println("JVM Map: Desktop style updated with markers")
+            } catch (e: Exception) { 
+                println("JVM Map: Error injecting GeoJSON: ${e.message}")
+            }
         }
     }
 
@@ -163,14 +176,18 @@ actual fun MapScreen() {
             cameraState = camera,
             baseStyle = style,
             onMapLongClick = { clickPos, _ ->
+                println("JVM Map: Long click at ${clickPos.latitude}, ${clickPos.longitude}")
+                focusManager.clearFocus()
                 viewModel.onMapLongClick(clickPos)
                 ClickResult.Consume
             },
             onMapClick = { clickPos, offset ->
+                println("JVM Map: Click at ${clickPos.latitude}, ${clickPos.longitude}")
+                focusManager.clearFocus()
                 val projection = camera.projection
                 val clickX = offset.x.value
                 val clickY = offset.y.value
-                val threshold = 35.0 
+                val threshold = 40.0 
                 
                 val pointsNear = items.filter { item ->
                     val pos = item.getPosition() ?: return@filter false
@@ -180,20 +197,13 @@ actual fun MapScreen() {
                         val dy = screenLoc.y.value - clickY
                         dx * dx + dy * dy < threshold * threshold
                     } else {
-                        val dLon = pos.longitude - clickPos.longitude
-                        val dLat = pos.latitude - clickPos.latitude
-                        val geoThreshold = 0.1 / (camera.position.zoom + 1.0)
-                        dLon * dLon + dLat * dLat < geoThreshold * geoThreshold
+                        false
                     }
                 }
                 
                 if (pointsNear.isNotEmpty()) {
-                    val firstPos = pointsNear.first().getPosition()
-                    val allSameLocation = pointsNear.all { it.getPosition() == firstPos }
-                    
-                    if (pointsNear.size > 1 && !allSameLocation) {
-                        val currentZoom = camera.position.zoom
-                        val nextZoom = (currentZoom + 2.5).coerceAtMost(18.0)
+                    if (pointsNear.size > 1) {
+                        val nextZoom = (camera.position.zoom + 3.0).coerceAtMost(18.0)
                         coroutineScope.launch {
                             camera.animateTo(
                                 CameraPosition(target = clickPos, zoom = nextZoom),
@@ -208,90 +218,93 @@ actual fun MapScreen() {
                     ClickResult.Pass
                 }
             }
-        )
+        ) { }
 
-        // On Desktop, UI elements must be in Popups to stay above the native map view
-        Popup(
-            alignment = Alignment.TopCenter,
-            offset = IntOffset(0, 16),
-            properties = PopupProperties(focusable = true)
-        ) {
-            MapSearchBar(
-                query = searchQuery,
-                onQueryChange = { viewModel.onSearchQueryChange(it) },
-                modifier = Modifier.width(400.dp)
-            )
-        }
+        // --- SEPARATE WINDOWS FOR EVERYTHING ---
 
-        Popup(
-            alignment = Alignment.CenterEnd,
-            offset = IntOffset(-16, 0)
+        // 1. Search Bar Window
+        Window(
+            onCloseRequest = {},
+            state = rememberWindowState(position = WindowPosition(Alignment.TopCenter), size = DpSize(450.dp, 100.dp)),
+            title = "Search",
+            undecorated = true,
+            alwaysOnTop = true,
+            transparent = true
         ) {
-            MapControls(
-                onZoomIn = {
-                    coroutineScope.launch {
-                        camera.animateTo(
-                            camera.position.copy(zoom = (camera.position.zoom + 1.0).coerceAtMost(20.0)),
-                            duration = 300.milliseconds
-                        )
-                    }
-                },
-                onZoomOut = {
-                    coroutineScope.launch {
-                        camera.animateTo(
-                            camera.position.copy(zoom = (camera.position.zoom - 1.0).coerceAtLeast(1.0)),
-                            duration = 300.milliseconds
-                        )
-                    }
-                },
-                onReset = {
-                    coroutineScope.launch {
-                        camera.animateTo(initialPosition, duration = 500.milliseconds)
-                    }
+            MaterialTheme {
+                Surface(modifier = Modifier.padding(8.dp), shape = RoundedCornerShape(12.dp), shadowElevation = 8.dp) {
+                    MapSearchBar(
+                        query = searchQuery,
+                        onQueryChange = { viewModel.onSearchQueryChange(it) },
+                        modifier = Modifier.fillMaxWidth().padding(8.dp)
+                    )
                 }
-            )
-        }
-
-        selectedItem?.let { item ->
-            DialogWindow(
-                onCloseRequest = { viewModel.onDismissPopup() },
-                state = rememberDialogState(width = 600.dp, height = 700.dp),
-                title = item.itemLabel,
-                resizable = false,
-                focusable = true
-            ) {
-                HeritageInfoPopup(
-                    item = item,
-                    onDismiss = { viewModel.onDismissPopup() },
-                    onDelete = { viewModel.deleteItem(item) }
-                )
             }
         }
 
-        pendingNewPosition?.let { position ->
-            DialogWindow(
-                onCloseRequest = { viewModel.onDismissAddDialog() },
-                state = rememberDialogState(width = 500.dp, height = 450.dp),
-                title = "Дадаць новы аб'ект",
-                resizable = false,
-                focusable = true
+        // 2. Map Legend Window
+        Window(
+            onCloseRequest = {},
+            state = rememberWindowState(position = WindowPosition(Alignment.BottomStart), size = DpSize(320.dp, 220.dp)),
+            title = "Legend",
+            undecorated = true,
+            alwaysOnTop = true,
+            transparent = true
+        ) {
+            MaterialTheme {
+                MapLegend(modifier = Modifier.fillMaxSize().padding(8.dp))
+            }
+        }
+
+        // 3. Info popup
+        selectedItem?.let { item ->
+            Window(
+                onCloseRequest = { viewModel.onDismissPopup() },
+                state = rememberWindowState(size = DpSize(600.dp, 700.dp)),
+                title = item.itemLabel,
+                alwaysOnTop = true
             ) {
-                AddHeritageDialog(
-                    position = position,
-                    onDismiss = { viewModel.onDismissAddDialog() },
-                    onAdd = { name, category, imageUrl ->
-                        viewModel.addNewItem(name, category, imageUrl)
+                MaterialTheme {
+                    HeritageInfoPopup(
+                        item = item,
+                        onDismiss = { viewModel.onDismissPopup() },
+                        onDelete = { viewModel.deleteItem(item) }
+                    )
+                }
+            }
+        }
+
+        // 4. Add object popup
+        pendingNewPosition?.let { position ->
+            Window(
+                onCloseRequest = { viewModel.onDismissAddDialog() },
+                state = rememberWindowState(size = DpSize(500.dp, 500.dp)),
+                title = "Add new object",
+                alwaysOnTop = true
+            ) {
+                MaterialTheme {
+                    Surface(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                        AddHeritageContent(
+                            position = position,
+                            onAdd = { name, category, imageUrl ->
+                                viewModel.addNewItem(name, category, imageUrl)
+                            }
+                        )
                     }
-                )
+                }
             }
         }
 
         error?.let { errorMsg ->
-            Popup(alignment = Alignment.Center) {
-                ErrorOverlay(
-                    message = errorMsg,
-                    onRetry = { viewModel.loadItems() }
-                )
+            Window(
+                onCloseRequest = { viewModel.loadItems() },
+                state = rememberWindowState(size = DpSize(400.dp, 200.dp)),
+                title = "Error",
+                alwaysOnTop = true
+            ) {
+                MaterialTheme {
+                    ErrorOverlay(message = errorMsg, onRetry = { viewModel.loadItems() })
+                }
             }
         }
     }

@@ -7,7 +7,7 @@ import com.aleskrot.zabytki.domain.repository.HeritageRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.maplibre.spatialk.geojson.Position
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 class MapViewModel(
     private val repository: HeritageRepository
@@ -79,6 +79,7 @@ class MapViewModel(
     }
 
     fun onMapLongClick(position: Position) {
+        println("MapViewModel: Long click at ${position.latitude}, ${position.longitude}")
         _pendingNewPosition.value = position
     }
 
