@@ -5,10 +5,11 @@ WORKDIR /home/gradle/src
 
 RUN ./gradlew :server:installDist --no-daemon
 
-FROM openjdk:17-slim
+FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 COPY --from=build /home/gradle/src/server/build/install/server /app
 
 EXPOSE 8080
+
 CMD ["./bin/server"]
