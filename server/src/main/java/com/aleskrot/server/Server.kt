@@ -38,7 +38,7 @@ fun main() {
         }
         install(CachingHeaders) {
             options { _, _ ->
-                CachingOptions(CacheControl.MaxAge(maxAgeSeconds = 3600))
+                null
             }
         }
         install(CORS) {

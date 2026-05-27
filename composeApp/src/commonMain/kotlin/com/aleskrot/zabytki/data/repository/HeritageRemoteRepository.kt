@@ -40,8 +40,9 @@ class HeritageRemoteRepository(
             
             val response = httpClient.get(url) {
                 if (forceRefresh) {
-                    // This forces Ktor's HttpCache and some proxies to bypass cached data
                     header(io.ktor.http.HttpHeaders.CacheControl, "no-cache")
+                    header(io.ktor.http.HttpHeaders.Pragma, "no-cache")
+                    header(io.ktor.http.HttpHeaders.Expires, "0")
                 }
             }
             println("HeritageRemoteRepository: Response status: ${response.status}")
