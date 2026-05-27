@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 actual fun MapScreen() {
-    val httpClient = remember { createHttpClient() }
+    val httpClient = createHttpClient()
     val repository = remember { HeritageRemoteRepository(httpClient) }
     val viewModel = remember { MapViewModel(repository) }
     val coroutineScope = rememberCoroutineScope()
@@ -56,7 +56,7 @@ actual fun MapScreen() {
     
     val initialPosition = CameraPosition(
         target = Position(longitude = 21.0122, latitude = 52.2297),
-        zoom = 10.0
+        zoom = 10.0,
     )
     val camera = rememberCameraState(firstPosition = initialPosition)
 
@@ -195,7 +195,7 @@ actual fun MapScreen() {
                         val screenLoc = projection.screenLocationFromPosition(pos)
                         val dx = screenLoc.x.value - clickX
                         val dy = screenLoc.y.value - clickY
-                        dx * dx + dy * dy < threshold * threshold
+                        (dx * dx + dy * dy) < (threshold * threshold)
                     } else {
                         false
                     }

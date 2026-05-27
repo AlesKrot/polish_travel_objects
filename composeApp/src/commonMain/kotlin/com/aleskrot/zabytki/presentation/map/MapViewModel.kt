@@ -10,7 +10,7 @@ import org.maplibre.spatialk.geojson.Position
 import kotlin.time.Clock
 
 class MapViewModel(
-    private val repository: HeritageRepository
+    private val repository: HeritageRepository,
 ) : ViewModel() {
 
     private val _allItems = MutableStateFlow<List<HeritageItem>>(emptyList())
@@ -24,7 +24,7 @@ class MapViewModel(
     val items: StateFlow<List<HeritageItem>> = combine(_allItems, _searchQuery, _selectedCategory) { items, query, category ->
         items.filter { item ->
             val matchesQuery = query.isEmpty() || item.itemLabel.contains(query, ignoreCase = true)
-            val matchesCategory = category == null || item.categoryLabel == category
+            val matchesCategory = (category == null) || (item.categoryLabel == category)
             matchesQuery && matchesCategory
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -52,7 +52,7 @@ class MapViewModel(
             try {
                 val result = repository.getHeritageItems()
                 _allItems.value = result
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 if (_allItems.value.isEmpty()) {
                     _error.value = "Server unreachable"
                 }
@@ -126,6 +126,6 @@ class MapViewModel(
     }
 
     fun getCategories(): List<String> {
-        return _allItems.value.map { it.categoryLabel }.distinct().sorted()
+        return _allItems.value.asSequence().map { it.categoryLabel }.distinct().sorted().toList()
     }
 }
