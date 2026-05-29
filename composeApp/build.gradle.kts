@@ -66,6 +66,17 @@ kotlin {
         browser()
         binaries.executable()
     }
+
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach {
+        it.binaries.framework {
+            baseName = "ComposeApp"
+            isStatic = true
+        }
+    }
     
     sourceSets {
         val commonMain by getting
@@ -75,6 +86,16 @@ kotlin {
         androidMain.get().dependsOn(mapMain)
         jvmMain.get().dependsOn(mapMain)
         jsMain.get().dependsOn(mapMain)
+
+        val iosX64Main by getting
+        val iosArm64Main by getting
+        val iosSimulatorArm64Main by getting
+        val iosMain by creating {
+            dependsOn(mapMain)
+            iosX64Main.dependsOn(this)
+            iosArm64Main.dependsOn(this)
+            iosSimulatorArm64Main.dependsOn(this)
+        }
 
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
@@ -100,6 +121,10 @@ kotlin {
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
             implementation(libs.kotlinx.datetime)
+        }
+        iosMain.dependencies {
+            implementation(libs.ktor.client.darwin)
+            implementation(libs.maplibre.compose)
         }
         jsMain.dependencies {
             implementation(libs.ktor.client.js)
