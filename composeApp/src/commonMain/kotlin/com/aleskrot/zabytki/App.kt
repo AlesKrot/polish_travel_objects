@@ -3,8 +3,10 @@ package com.aleskrot.zabytki
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.aleskrot.zabytki.presentation.theme.AppRed
 import coil3.ImageLoader
 import coil3.annotation.ExperimentalCoilApi
 import coil3.compose.setSingletonImageLoaderFactory
@@ -31,7 +33,12 @@ fun App() {
             .build()
     }
 
-    MaterialTheme {
+    val colorScheme = lightColorScheme(
+        error = AppRed,
+        onError = androidx.compose.ui.graphics.Color.White
+    )
+
+    MaterialTheme(colorScheme = colorScheme) {
         Surface(modifier = Modifier.fillMaxSize()) {
             MapScreen()
         }

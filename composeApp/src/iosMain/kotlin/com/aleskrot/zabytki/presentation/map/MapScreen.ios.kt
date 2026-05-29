@@ -21,6 +21,7 @@ import org.maplibre.compose.camera.CameraPosition
 import org.maplibre.compose.camera.rememberCameraState
 import org.maplibre.compose.layers.CircleLayer
 import org.maplibre.compose.layers.SymbolLayer
+import com.aleskrot.zabytki.presentation.theme.AppRed
 import org.maplibre.compose.map.*
 import org.maplibre.compose.sources.GeoJsonData
 import org.maplibre.compose.sources.GeoJsonOptions
@@ -153,7 +154,7 @@ actual fun MapScreen() {
                         id = "heritage-points",
                         source = source,
                         filter = !feature.has("point_count"),
-                        color = const(Color.Red),
+                        color = const(AppRed),
                         radius = const(10.dp)
                     )
                 }
@@ -164,7 +165,10 @@ actual fun MapScreen() {
         MapSearchBar(
             query = searchQuery,
             onQueryChange = { viewModel.onSearchQueryChange(it) },
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp)
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(bottom = 32.dp)
         )
 
         MapControls(

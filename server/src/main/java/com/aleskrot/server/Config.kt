@@ -1,2 +1,68 @@
 package com.aleskrot.server
 
+import com.aleskrot.server.database.HeritageTable
+import com.aleskrot.server.models.HeritageItem
+import com.aleskrot.server.repository.HeritageRepository
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.server.application.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.cachingheaders.*
+import io.ktor.http.*
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.transactions.transaction
+
+object AppConfig {
+    const val PORT = 8080
+
+    fun initDatabase(repository: HeritageRepository) {
+        Database.connect("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;", driver = "org.h2.Driver")
+
+        transaction {
+            SchemaUtils.create(HeritageTable)
+        }
+        
+        seedDatabase(repository)
+    }
+
+    private fun seedDatabase(repository: HeritageRepository) {
+        runBlocking {
+            if (repository.getAllItems().isEmpty()) {
+                val jsonText = object {}.javaClass.classLoader
+                    .getResource("heritage.json")?.readText() ?: "[]"
+
+                val json = Json { ignoreUnknownKeys = true }
+                val items = json.decodeFromString<List<HeritageItem>>(jsonText)
+
+                for (item in items) {
+                    repository.addItem(item)
+                }
+                println("Added ${items.size} objects into database.")
+            }
+        }
+    }
+}
+
+fun Application.configurePlugins() {
+    install(ContentNegotiation) {
+        json()
+    }
+    
+    install(CachingHeaders) {
+        options { _, _ -> null }
+    }
+    
+    install(CORS) {
+        anyHost()
+        allowHeader(HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.AccessControlAllowOrigin)
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Delete)
+        allowMethod(HttpMethod.Options)
+    }
+}

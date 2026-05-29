@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.aleskrot.zabytki.presentation.theme.AppRed
 
 @Composable
 fun MapLegend(modifier: Modifier = Modifier) {
@@ -45,7 +46,7 @@ fun MapLegend(modifier: Modifier = Modifier) {
                 Box(
                     modifier = Modifier
                         .size(16.dp)
-                        .background(Color.Red, CircleShape)
+                        .background(AppRed, CircleShape)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text("Historic object", style = MaterialTheme.typography.bodySmall)

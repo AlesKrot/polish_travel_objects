@@ -2,8 +2,8 @@ package com.aleskrot.zabytki.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -12,13 +12,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
@@ -39,54 +36,29 @@ fun HeritageInfoPopup(
             title = { Text("Confirm decision") },
             text = { Text("Are you sure to delete this object?") },
             confirmButton = {
-                Button(
-                    onClick = {
-                        showDeleteConfirmation = false
-                        onDelete?.invoke()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                ) {
-                    Text("Yes", color = Color.White)
-                }
+                TextButton(onClick = {
+                    showDeleteConfirmation = false
+                    onDelete?.invoke()
+                }) { Text("Yes", color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                Button(
-                    onClick = { showDeleteConfirmation = false }
-                ) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showDeleteConfirmation = false }) { Text("Cancel") }
             }
         )
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onDismiss
-            ),
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)).clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center
     ) {
         Card(
             shape = RoundedCornerShape(24.dp),
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .wrapContentHeight()
-                .padding(16.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = { /* Consume click */ }
-                ),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            modifier = Modifier.fillMaxWidth(0.85f).padding(16.dp).clickable(enabled = false) { },
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
-            Box {
+            Box(modifier = Modifier.fillMaxWidth()) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
+                    modifier = Modifier.padding(16.dp).fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (item.image.isNotEmpty()) {
@@ -95,31 +67,19 @@ fun HeritageInfoPopup(
                                 .data(item.image)
                                 .crossfade(true)
                                 .build(),
-                            contentDescription = item.itemLabel,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp)
-                                .clip(RoundedCornerShape(16.dp)),
-                            contentScale = ContentScale.Crop,
-                            loading = {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator()
-                                }
-                            },
-                            error = {
-                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Text("Image error", color = MaterialTheme.colorScheme.error)
-                                }
-                            }
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(16.dp)),
+                            contentScale = ContentScale.Crop
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    AutoResizeText(
+                    Text(
                         text = item.itemLabel,
                         style = MaterialTheme.typography.headlineMedium,
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 2
+                        textAlign = TextAlign.Center,
+                        softWrap = false, // ВЫПРАЎЛЕННЕ: Тэкст больш не будзе сціскацца
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -128,16 +88,18 @@ fun HeritageInfoPopup(
                         text = item.categoryLabel,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        softWrap = false, // ВЫПРАЎЛЕННЕ
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Button(
                         onClick = onDismiss,
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                        modifier = Modifier.fillMaxWidth(0.6f)
                     ) {
-                        Text("Close")
+                        Text("Close", softWrap = false)
                     }
                 }
 
@@ -148,43 +110,21 @@ fun HeritageInfoPopup(
                             .align(Alignment.TopEnd)
                             .padding(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = Color.Red
-                        )
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(6.dp)
+                            )
+                        }
                     }
                 }
             }
         }
     }
-}
-
-@Composable
-fun AutoResizeText(
-    text: String,
-    style: TextStyle,
-    modifier: Modifier = Modifier,
-    maxLines: Int = 2
-) {
-    var fontSize by remember(text) { mutableStateOf(style.fontSize) }
-    var readyToDraw by remember(text) { mutableStateOf(false) }
-
-    Text(
-        text = text,
-        style = style.copy(fontSize = fontSize),
-        modifier = modifier.drawWithContent {
-            if (readyToDraw) drawContent()
-        },
-        maxLines = maxLines,
-        softWrap = true,
-        textAlign = TextAlign.Center,
-        onTextLayout = { textLayoutResult ->
-            if (textLayoutResult.hasVisualOverflow && fontSize > 12.sp) {
-                fontSize = (fontSize.value * 0.9f).sp
-            } else {
-                readyToDraw = true
-            }
-        }
-    )
 }

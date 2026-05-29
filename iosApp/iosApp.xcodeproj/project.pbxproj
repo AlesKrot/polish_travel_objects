@@ -6,7 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E1011D462FC9B81A00F34A65 /* MapLibre in Frameworks */ = {isa = PBXBuildFile; productRef = E1011D452FC9B81A00F34A65 /* MapLibre */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		E15BF9082FC918B3001C4067 /* ComposeApp.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = ComposeApp.framework; sourceTree = "<group>"; };
 		E1F172532FC748F6007741C7 /* iosApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iosApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -23,16 +28,35 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E1011D462FC9B81A00F34A65 /* MapLibre in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		E15BF9072FC918B3001C4067 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E15BF9092FC918B3001C4067 /* debugFramework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		E15BF9092FC918B3001C4067 /* debugFramework */ = {
+			isa = PBXGroup;
+			children = (
+				E15BF9082FC918B3001C4067 /* ComposeApp.framework */,
+			);
+			name = debugFramework;
+			path = ../composeApp/build/bin/iosSimulatorArm64/debugFramework;
+			sourceTree = "<group>";
+		};
 		E1F1724A2FC748F6007741C7 = {
 			isa = PBXGroup;
 			children = (
 				E1F172552FC748F6007741C7 /* iosApp */,
+				E15BF9072FC918B3001C4067 /* Frameworks */,
 				E1F172542FC748F6007741C7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -52,6 +76,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = E1F172632FC748F9007741C7 /* Build configuration list for PBXNativeTarget "iosApp" */;
 			buildPhases = (
+				E15BF8F02FC91073001C4067 /* ShellScript */,
 				E1F1724F2FC748F6007741C7 /* Sources */,
 				E1F172502FC748F6007741C7 /* Frameworks */,
 				E1F172512FC748F6007741C7 /* Resources */,
@@ -65,6 +90,7 @@
 			);
 			name = iosApp;
 			packageProductDependencies = (
+				E1011D452FC9B81A00F34A65 /* MapLibre */,
 			);
 			productName = iosApp;
 			productReference = E1F172532FC748F6007741C7 /* iosApp.app */;
@@ -94,6 +120,9 @@
 			);
 			mainGroup = E1F1724A2FC748F6007741C7;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E1011D442FC9B81A00F34A65 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E1F172542FC748F6007741C7 /* Products */;
 			projectDirPath = "";
@@ -113,6 +142,26 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		E15BF8F02FC91073001C4067 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\nset -ev\nREPO_ROOT=\"$SRCROOT/..\"\n\"$REPO_ROOT/gradlew\" -p \"$REPO_ROOT\" :composeApp:embedAndSignAppleFrameworkForXcode\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		E1F1724F2FC748F6007741C7 /* Sources */ = {
@@ -184,6 +233,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -241,6 +291,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -255,7 +306,17 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RPW2KKRM7L;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				"FRAMEWORK_SEARCH_PATHS[arch=*]" = "   $(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CADisableMinimumFrameDurationOnPhone = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Zabytki;
+				INFOPLIST_KEY_CFBundleName = Zabytki;
+				INFOPLIST_KEY_CFBundleShortVersionString = 1.0;
+				INFOPLIST_KEY_CFBundleVersion = 1;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Zabytki needs your location to show where you are on the map.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Zabytki needs your location to show where you are on the map.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Zabytki needs your location to show where you are on the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -287,7 +348,17 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = RPW2KKRM7L;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				"FRAMEWORK_SEARCH_PATHS[arch=*]" = "   $(SRCROOT)/../composeApp/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CADisableMinimumFrameDurationOnPhone = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Zabytki;
+				INFOPLIST_KEY_CFBundleName = Zabytki;
+				INFOPLIST_KEY_CFBundleShortVersionString = 1.0;
+				INFOPLIST_KEY_CFBundleVersion = 1;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Zabytki needs your location to show where you are on the map.";
+				INFOPLIST_KEY_NSLocationAlwaysUsageDescription = "Zabytki needs your location to show where you are on the map.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Zabytki needs your location to show where you are on the map.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -332,6 +403,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E1011D442FC9B81A00F34A65 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/maplibre/maplibre-gl-native-distribution";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.26.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E1011D452FC9B81A00F34A65 /* MapLibre */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E1011D442FC9B81A00F34A65 /* XCRemoteSwiftPackageReference "maplibre-gl-native-distribution" */;
+			productName = MapLibre;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E1F1724B2FC748F6007741C7 /* Project object */;
 }

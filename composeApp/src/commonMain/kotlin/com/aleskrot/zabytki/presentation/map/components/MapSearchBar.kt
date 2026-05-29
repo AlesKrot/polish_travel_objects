@@ -25,6 +25,7 @@ fun MapSearchBar(
 
     Card(
         modifier = modifier
+            .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .clickable { focusRequester.requestFocus() },
         shape = RoundedCornerShape(24.dp),
@@ -36,30 +37,20 @@ fun MapSearchBar(
             placeholder = { 
                 Text(
                     text = "Search heritage items...",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    softWrap = false // ВЫПРАЎЛЕННЕ: Тэкст будзе расьцягвацца
                 ) 
             },
             modifier = Modifier
                 .fillMaxWidth()
                 .focusRequester(focusRequester),
             colors = TextFieldDefaults.colors(
-                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                disabledContainerColor = MaterialTheme.colorScheme.surface,
                 focusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                disabledIndicatorColor = androidx.compose.ui.graphics.Color.Transparent,
-                cursorColor = MaterialTheme.colorScheme.primary
+                unfocusedIndicatorColor = androidx.compose.ui.graphics.Color.Transparent
             ),
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(
-                onSearch = {
-                    focusManager.clearFocus()
-                }
-            )
+            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
         )
     }
 }

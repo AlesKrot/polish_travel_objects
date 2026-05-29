@@ -35,7 +35,8 @@ class HeritageRemoteRepository(
 
     override suspend fun getHeritageItems(forceRefresh: Boolean): List<HeritageItem> {
         return try {
-            val url = "$baseUrl/heritage"
+            val cleanBaseUrl = baseUrl.removeSuffix("/")
+            val url = "$cleanBaseUrl/heritage"
             println("HeritageRemoteRepository: Fetching from $url (forceRefresh=$forceRefresh)")
             
             val response = httpClient.get(url) {

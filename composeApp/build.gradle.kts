@@ -25,9 +25,31 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.composeHotReload)
+    // alias(libs.plugins.composeHotReload)
     alias(libs.plugins.buildkonfig)
     alias(libs.plugins.serialization)
+}
+
+tasks.matching { it.name == "embedAndSignAppleFrameworkForXcode" }.configureEach {
+    val isXcodeBuild = System.getenv("SDK_NAME") != null
+    if (!isXcodeBuild) {
+        enabled = false
+    }
+}
+
+tasks.matching { it.name == "syncComposeResourcesForIos" }.configureEach {
+    val archs = System.getenv("ARCHS")
+    if (archs == null) {
+        enabled = false
+    } else {
+        try {
+            val method = this.javaClass.getMethod("getXcodeTargetArchs")
+            val property = method.invoke(this) as? org.gradle.api.provider.ListProperty<String>
+            property?.set(archs.split(" "))
+        } catch (e: Exception) {
+            // Ignored
+        }
+    }
 }
 
 val localProperties = Properties().apply {
@@ -86,16 +108,19 @@ kotlin {
         androidMain.get().dependsOn(mapMain)
         jvmMain.get().dependsOn(mapMain)
         jsMain.get().dependsOn(mapMain)
+        wasmJsMain.get().dependsOn(mapMain)
 
+        val iosMain by creating {
+            dependsOn(mapMain)
+        }
+        
         val iosX64Main by getting
         val iosArm64Main by getting
         val iosSimulatorArm64Main by getting
-        val iosMain by creating {
-            dependsOn(mapMain)
-            iosX64Main.dependsOn(this)
-            iosArm64Main.dependsOn(this)
-            iosSimulatorArm64Main.dependsOn(this)
-        }
+
+        iosX64Main.dependsOn(iosMain)
+        iosArm64Main.dependsOn(iosMain)
+        iosSimulatorArm64Main.dependsOn(iosMain)
 
         androidMain.dependencies {
             implementation(libs.compose.uiToolingPreview)
