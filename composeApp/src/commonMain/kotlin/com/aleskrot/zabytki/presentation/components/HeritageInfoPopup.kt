@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
@@ -14,8 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
@@ -74,23 +77,24 @@ fun HeritageInfoPopup(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    Text(
+                    // Выкарыстоўваем BasicText, каб абыйсці багі Material3 на iOS
+                    BasicText(
                         text = item.itemLabel,
-                        style = MaterialTheme.typography.headlineMedium,
-                        textAlign = TextAlign.Center,
-                        softWrap = false, // ВЫПРАЎЛЕННЕ: Тэкст больш не будзе сціскацца
-                        modifier = Modifier.fillMaxWidth()
+                        style = TextStyle(
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
+                    BasicText(
                         text = item.categoryLabel,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        softWrap = false, // ВЫПРАЎЛЕННЕ
-                        modifier = Modifier.fillMaxWidth()
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            color = Color.Gray
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -99,16 +103,17 @@ fun HeritageInfoPopup(
                         onClick = onDismiss,
                         modifier = Modifier.fillMaxWidth(0.6f)
                     ) {
-                        Text("Close", softWrap = false)
+                        BasicText(
+                            text = "Close",
+                            style = TextStyle(color = Color.White, fontWeight = FontWeight.Medium)
+                        )
                     }
                 }
 
                 if (onDelete != null) {
                     IconButton(
                         onClick = { showDeleteConfirmation = true },
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
+                        modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)
                     ) {
                         Surface(
                             shape = CircleShape,

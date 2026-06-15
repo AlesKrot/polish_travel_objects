@@ -38,8 +38,8 @@ fun MapSearchBar(
                 Text(
                     text = "Search heritage items...",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    softWrap = false // ВЫПРАЎЛЕННЕ: Тэкст будзе расьцягвацца
-                ) 
+                    modifier = Modifier.fillMaxWidth()
+                )
             },
             modifier = Modifier
                 .fillMaxWidth()

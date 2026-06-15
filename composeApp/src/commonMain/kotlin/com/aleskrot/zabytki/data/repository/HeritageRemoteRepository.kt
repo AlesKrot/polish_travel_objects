@@ -38,7 +38,7 @@ class HeritageRemoteRepository(
             val cleanBaseUrl = baseUrl.removeSuffix("/")
             val url = "$cleanBaseUrl/heritage"
             println("HeritageRemoteRepository: Fetching from $url (forceRefresh=$forceRefresh)")
-            
+
             val response = httpClient.get(url) {
                 if (forceRefresh) {
                     header(io.ktor.http.HttpHeaders.CacheControl, "no-cache")
@@ -47,7 +47,7 @@ class HeritageRemoteRepository(
                 }
             }
             println("HeritageRemoteRepository: Response status: ${response.status}")
-            
+
             val items: List<HeritageItem> = withContext(Dispatchers.Default) {
                 val fetchedItems: List<HeritageItem> = response.body()
                 fetchedItems.map { item ->
@@ -64,7 +64,7 @@ class HeritageRemoteRepository(
                 }
             }
             println("HeritageRemoteRepository: Successfully fetched ${items.size} items")
-            
+
             items
         } catch (e: Exception) {
             val errorMsg = "Error fetching items: ${e.message}"

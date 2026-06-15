@@ -29,7 +29,8 @@ fun MapLegend(modifier: Modifier = Modifier) {
             Text(
                 text = "Legend of map",
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.fillMaxWidth()
             )
             
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -39,7 +40,11 @@ fun MapLegend(modifier: Modifier = Modifier) {
                         .background(Color(0xFF51BBD6), CircleShape)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Cluster (group of objects)", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = "Cluster (group of objects)", 
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -49,7 +54,11 @@ fun MapLegend(modifier: Modifier = Modifier) {
                         .background(AppRed, CircleShape)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text("Historic object", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    text = "Historic object", 
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f)
+                )
             }
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
